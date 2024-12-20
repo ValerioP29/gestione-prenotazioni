@@ -100,10 +100,10 @@ public class GestionePrenotazioniApplication {
 			TipoPostazione tipo = TipoPostazione.valueOf(scanner.nextLine().toUpperCase());
 			System.out.print("Numero massimo di occupanti: ");
 			int maxOccupanti = scanner.nextInt();
-			scanner.nextLine(); // Consumiamo la newline
+			scanner.nextLine(); // Consuma la newline
 			System.out.print("ID Edificio associato: ");
 			Long idEdificio = scanner.nextLong();
-			scanner.nextLine(); // Consumiamo la newline
+			scanner.nextLine(); // Consuma la newline
 
 			Optional<Edificio> edificio = edificioRepository.findById(idEdificio);
 			if (edificio.isPresent()) {
@@ -189,9 +189,17 @@ public class GestionePrenotazioniApplication {
 			System.out.print("Tipo (PRIVATO, OPENSPACE, SALA_RIUNIONI): ");
 			TipoPostazione tipo = TipoPostazione.valueOf(scanner.nextLine().toUpperCase());
 			System.out.print("Città: ");
-			String citta = scanner.nextLine();
+			String citta = scanner.nextLine().trim().toLowerCase();
 
-			List<Postazione> postazioni = postazioneRepository.findAll().stream()
+
+			List<Postazione> tutteLePostazioni = postazioneRepository.findAll();
+			System.out.println("Debug: Postazioni attualmente salvate nel database:");
+			tutteLePostazioni.forEach(p ->
+					System.out.println("Postazione " + p.getCodice() + " - Tipo: " + p.getTipo() +
+							" - Città: " + p.getEdificio().getCitta()));
+
+
+			List<Postazione> postazioni = tutteLePostazioni.stream()
 					.filter(p -> p.getTipo() == tipo && p.getEdificio().getCitta().equalsIgnoreCase(citta))
 					.toList();
 
@@ -206,6 +214,7 @@ public class GestionePrenotazioniApplication {
 			System.out.println("Errore nella ricerca delle postazioni: " + e.getMessage());
 		}
 	}
+
 
 	// Prenota Postazione
 	private void prenotaPostazione(Scanner scanner, UtenteRepository utenteRepository, PostazioneRepository postazioneRepository, PrenotazioneRepository prenotazioneRepository) {

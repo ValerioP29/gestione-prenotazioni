@@ -5,6 +5,7 @@ import com.example.gestione_prenotazioni.repository.EdificioRepository;
 import com.example.gestione_prenotazioni.repository.PostazioneRepository;
 import com.example.gestione_prenotazioni.repository.PrenotazioneRepository;
 import com.example.gestione_prenotazioni.repository.UtenteRepository;
+import com.github.javafaker.Faker;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
@@ -41,7 +42,8 @@ public class GestionePrenotazioniApplication {
 				System.out.println("6. Visualizza Utenti");
 				System.out.println("7. Ricerca Postazioni per Tipo e Città");
 				System.out.println("8. Prenota Postazione");
-				System.out.println("9. Esci");
+				System.out.println("9. Crea Dati Finti");
+				System.out.println("10. Esci");
 				System.out.print("Scegli un'opzione: ");
 				scelta = scanner.nextInt();
 				scanner.nextLine();  // Consuma la nuova linea
@@ -55,10 +57,11 @@ public class GestionePrenotazioniApplication {
 					case 6 -> visualizzaUtenti(utenteRepository);
 					case 7 -> ricercaPostazioni(scanner, postazioneRepository);
 					case 8 -> prenotaPostazione(scanner, utenteRepository, postazioneRepository, prenotazioneRepository);
-					case 9 -> System.out.println("Uscita dal sistema.");
+					case 9 -> creaDatiFinti(utenteRepository, postazioneRepository, edificioRepository);
+					case 10 -> System.out.println("Uscita dal sistema.");
 					default -> System.out.println("Scelta non valida. Riprova.");
 				}
-			} while (scelta != 9);
+			} while (scelta != 10);
 		};
 	}
 
@@ -153,7 +156,7 @@ public class GestionePrenotazioniApplication {
 		if (edifici.isEmpty()) {
 			System.out.println("Nessun edificio trovato.");
 		} else {
-			edifici.forEach(System.out::println);
+			edifici.forEach(edificio -> System.out.println(edificio.getNome() + ", " + edificio.getIndirizzo() + " - " + edificio.getCitta()));
 		}
 	}
 
@@ -164,7 +167,7 @@ public class GestionePrenotazioniApplication {
 		if (postazioni.isEmpty()) {
 			System.out.println("Nessuna postazione trovata.");
 		} else {
-			postazioni.forEach(System.out::println);
+			postazioni.forEach(postazione -> System.out.println(postazione.getCodice() + ": " + postazione.getDescrizione() + " - Tipo: " + postazione.getTipo()));
 		}
 	}
 
@@ -175,7 +178,7 @@ public class GestionePrenotazioniApplication {
 		if (utenti.isEmpty()) {
 			System.out.println("Nessun utente trovato.");
 		} else {
-			utenti.forEach(System.out::println);
+			utenti.forEach(utente -> System.out.println(utente.getUsername() + " - " + utente.getNomeCompleto() + " - " + utente.getEmail()));
 		}
 	}
 
@@ -195,7 +198,7 @@ public class GestionePrenotazioniApplication {
 			if (postazioni.isEmpty()) {
 				System.out.println("Nessuna postazione trovata.");
 			} else {
-				postazioni.forEach(System.out::println);
+				postazioni.forEach(postazione -> System.out.println(postazione.getCodice() + ": " + postazione.getDescrizione()));
 			}
 		} catch (IllegalArgumentException e) {
 			System.out.println("Errore: Tipo di postazione non valido.");
@@ -205,58 +208,94 @@ public class GestionePrenotazioniApplication {
 	}
 
 	// Prenota Postazione
-	private void prenotaPostazione(Scanner scanner, UtenteRepository utenteRepository,
-								   PostazioneRepository postazioneRepository, PrenotazioneRepository prenotazioneRepository) {
+	private void prenotaPostazione(Scanner scanner, UtenteRepository utenteRepository, PostazioneRepository postazioneRepository, PrenotazioneRepository prenotazioneRepository) {
 		try {
 			System.out.println("\n--- Prenota Postazione ---");
-			System.out.print("ID Utente: ");
-			Long utenteId = scanner.nextLong();
-			scanner.nextLine();
 
-			Optional<Utente> utenteOptional = utenteRepository.findById(utenteId);
-			if (utenteOptional.isEmpty()) {
-				System.out.println("Errore: Utente non trovato.");
-				return;
+
+			System.out.print("Inserisci il codice della postazione da prenotare: ");
+			String codicePostazione = scanner.nextLine();
+
+			Optional<Postazione> postazioneOpt = postazioneRepository.findByCodice(codicePostazione);
+			if (postazioneOpt.isPresent()) {
+				Postazione postazione = postazioneOpt.get();
+
+				// Chiedi all'utente di scegliere un utente
+				System.out.print("Inserisci l'ID dell'utente che effettua la prenotazione: ");
+				Long idUtente = scanner.nextLong();
+				scanner.nextLine(); // Consuma la nuova linea
+
+				Optional<Utente> utenteOpt = utenteRepository.findById(idUtente);
+				if (utenteOpt.isPresent()) {
+					Utente utente = utenteOpt.get();
+
+					// Chiedi la data della prenotazione
+					System.out.print("Inserisci la data della prenotazione (YYYY-MM-DD): ");
+					String dataString = scanner.nextLine();
+					LocalDate dataPrenotazione = LocalDate.parse(dataString);
+
+					// Crea la prenotazione
+					Prenotazione prenotazione = new Prenotazione();
+					prenotazione.setPostazione(postazione);
+					prenotazione.setUtente(utente);
+					prenotazione.setData(dataPrenotazione);
+
+					// Salva la prenotazione
+					prenotazioneRepository.save(prenotazione);
+
+					System.out.println("Prenotazione effettuata con successo.");
+				} else {
+					System.out.println("Utente non trovato.");
+				}
+			} else {
+				System.out.println("Postazione non trovata.");
 			}
-			Utente utente = utenteOptional.get();
-
-			System.out.print("ID Postazione: ");
-			Long postazioneId = scanner.nextLong();
-			scanner.nextLine();
-
-			Optional<Postazione> postazioneOptional = postazioneRepository.findById(postazioneId);
-			if (postazioneOptional.isEmpty()) {
-				System.out.println("Errore: Postazione non trovata.");
-				return;
-			}
-			Postazione postazione = postazioneOptional.get();
-
-			System.out.print("Data (YYYY-MM-DD): ");
-			String dataStr = scanner.nextLine();
-			LocalDate data = LocalDate.parse(dataStr);
-
-
-			if (prenotazioneRepository.countByPostazioneAndData(postazione, data) > 0) {
-				System.out.println("Errore: La postazione è già prenotata per questa data.");
-				return;
-			}
-
-
-			if (prenotazioneRepository.countByUtenteAndData(utente, data) > 0) {
-				System.out.println("Errore: L'utente ha già una prenotazione per questa data.");
-				return;
-			}
-
-
-			Prenotazione prenotazione = new Prenotazione();
-			prenotazione.setUtente(utente);
-			prenotazione.setPostazione(postazione);
-			prenotazione.setData(data);
-			prenotazioneRepository.save(prenotazione);
-
-			System.out.println("Prenotazione effettuata con successo.");
 		} catch (Exception e) {
-			System.out.println("Errore nella prenotazione: " + e.getMessage());
+			System.out.println("Errore nella prenotazione della postazione: " + e.getMessage());
+		}
+	}
+
+
+
+	private void creaDatiFinti(UtenteRepository utenteRepository, PostazioneRepository postazioneRepository, EdificioRepository edificioRepository) {
+		try {
+			Faker faker = new Faker();
+
+
+			for (int i = 0; i < 5; i++) {
+				Edificio edificio = new Edificio();
+				edificio.setNome(faker.company().name());
+				edificio.setIndirizzo(faker.address().streetAddress());
+				edificio.setCitta(faker.address().city());
+				edificioRepository.save(edificio);
+			}
+
+
+			for (int i = 0; i < 5; i++) {
+				Utente utente = new Utente();
+				utente.setUsername(faker.name().username());
+				utente.setNomeCompleto(faker.name().fullName());
+				utente.setEmail(faker.internet().emailAddress());
+				utenteRepository.save(utente);
+			}
+
+
+			for (int i = 0; i < 5; i++) {
+				Postazione postazione = new Postazione();
+				postazione.setCodice(faker.code().asin());
+				postazione.setDescrizione(faker.lorem().sentence());
+				postazione.setTipo(TipoPostazione.values()[faker.random().nextInt(TipoPostazione.values().length)]);
+				postazione.setMaxOccupanti(faker.random().nextInt(1, 10));
+
+
+				Edificio edificio = edificioRepository.findAll().get(faker.random().nextInt(edificioRepository.findAll().size()));
+				postazione.setEdificio(edificio);
+				postazioneRepository.save(postazione);
+			}
+
+			System.out.println("Dati finti creati con successo.");
+		} catch (Exception e) {
+			System.out.println("Errore nella creazione dei dati finti: " + e.getMessage());
 		}
 	}
 }
